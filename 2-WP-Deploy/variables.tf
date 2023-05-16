@@ -14,10 +14,6 @@ variable "subscription_id" {
     type = string
 }
 
-variable "name" {
-    type = string
-}
-
 variable "admin_username" {
   type = string
 }

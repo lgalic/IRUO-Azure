@@ -1,9 +1,11 @@
-resource "azurerm_resource_group" "ime_prezime" {
-    name = var.name
-    location = "West Europe"
+data "terraform_remote_state" "ResGroup-PubIP" {
+  backend = "local"
+  config = {
+    path = "../1-ResGroup-PubIP/terraform.tfstate"
+  }
 }
 
-resource "azurerm_virtual_network" "priv_mreze"{
+resource "azurerm_virtual_network" "priv-mreze"{
     count = length(var.priv_mreze)
     name = var.priv_mreze[count.index].name
     location = var.priv_mreze[count.index].location
@@ -48,14 +50,6 @@ resource "azurerm_linux_virtual_machine" "WordPress" {
   }
   custom_data = filebase64("cloud-init/wordpress-cloud-init.txt")
   depends_on = [ azurerm_network_interface.WP-NICs ]        
-}
-
-resource "azurerm_public_ip" "javna_IP" {
-    name = "JavnaIPadresa"
-    location = azurerm_resource_group.ime_prezime.location
-    resource_group_name = azurerm_resource_group.ime_prezime.name
-    allocation_method = "Static"
-    depends_on = [ azurerm_resource_group.ime_prezime ]
 }
 
 resource "azurerm_application_gateway" "L7-lb" {
