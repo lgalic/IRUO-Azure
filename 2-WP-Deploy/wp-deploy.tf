@@ -1,21 +1,18 @@
-data "terraform_remote_state" "ResGroup-PubIP" {
+data "terraform_remote_state" "ResGroup_PubIP" {
   backend = "local"
-  config = {
-    path = "../1-ResGroup-PubIP/terraform.tfstate"
-  }
 }
 
 resource "azurerm_virtual_network" "priv-mreze"{
     count = length(var.priv_mreze)
     name = var.priv_mreze[count.index].name
     location = var.priv_mreze[count.index].location
-    resource_group_name = azurerm_resource_group.ime_prezime.name
+    resource_group_name = data.terraform_remote_state.ResGroup_PubIP.outputs.res-group-name
     address_space = var.priv_mreze[count.index].address_space
     subnet {
         name = var.priv_mreze[count.index].subnet.name
         address_prefix = var.priv_mreze[count.index].subnet.address_prefix
     }
-    depends_on = [ azurerm_resource_group.ime_prezime ]
+    depends_on = [ data.terraform_remote_state.ResGroup_PubIP.outputs.res-group-name ]
 }
 
 resource "azurerm_network_interface" "WP-NICs" {
@@ -28,7 +25,7 @@ resource "azurerm_network_interface" "WP-NICs" {
       subnet_id = azurerm_virtual_network.priv_mreze[count.index].subnet.id
       private_ip_address_allocation = "Dynamic"
     }
-    depends_on = [ azurerm_virtual_network.priv_mreze ]
+    depends_on = [ azurerm_virtual_network.priv-mreze ]
 }
 
 resource "azurerm_linux_virtual_machine" "WordPress" {
