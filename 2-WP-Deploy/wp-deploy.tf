@@ -1,8 +1,11 @@
 data "terraform_remote_state" "ResGroup_PubIP" {
   backend = "local"
-}
+  config = {
+    path="${path.module}/../1-ResGroup-PubIP/terraform.tfstate"
+  }
+}  
 
-resource "azurerm_virtual_network" "priv-mreze"{
+resource "azurerm_virtual_network" "priv-mreze" {
     count = length(var.priv_mreze)
     name = var.priv_mreze[count.index].name
     location = var.priv_mreze[count.index].location
@@ -21,7 +24,7 @@ resource "azurerm_network_interface" "WP-NICs" {
     resource_group_name = data.terraform_remote_state.ResGroup_PubIP.outputs.res-group-name
     ip_configuration {
       name = "NIC-${count.index}-ipconfig"
-      subnet_id = azurerm_virtual_network.priv_mreze[count.index].subnet.id
+      subnet_id = azurerm_virtual_network.priv-mreze[index(azurerm_virtual_network.priv-mreze.*.subnet, var.priv_mreze[count.index].subnet.name)]
       private_ip_address_allocation = "Dynamic"
     }
     depends_on = [ azurerm_virtual_network.priv-mreze ]
@@ -35,20 +38,23 @@ resource "azurerm_linux_virtual_machine" "WordPress" {
   location = azurerm_network_interface.WP-NICs[count.index].location
   admin_username = var.admin_username
   admin_password = var.admin_password
+  disable_password_authentication = false
   network_interface_ids = [ azurerm_network_interface.WP-NICs[count.index].id ]
-  storage_profile {
-    source_image_reference {
-        publisher = "Canonical"
-        offer = "UbuntuServer"
-        sku = "22.04-LTS"
-        version = "latest"
-    }
+  os_disk {
+    caching = "ReadWrite"
+    storage_account_type = "Standard_LRS"
   }
-  custom_data = filebase64("cloud-init/wordpress-cloud-init.txt")
+  source_image_reference {
+    publisher = "Canonical"
+    offer = "UbuntuServer"
+    sku = "22.04-LTS"
+    version = "latest"
+  }
+#  custom_data = filebase64("cloud-init/wordpress-cloud-init.txt")
   depends_on = [ azurerm_network_interface.WP-NICs ]        
 }
 
-resource "azurerm_application_gateway" "L7-lb" {
+/*resource "azurerm_application_gateway" "L7-lb" {
     name = "App-Gateway-WP"
     location = azurerm_resource_group.ime_prezime.location
     resource_group_name = azurerm_resource_group.ime_prezime.name
@@ -68,4 +74,4 @@ resource "azurerm_application_gateway" "L7-lb" {
     backend_address_pool {
       name = "backend-pool-1"
     }
-}
+}*/
