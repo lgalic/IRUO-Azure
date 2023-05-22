@@ -12,14 +12,13 @@ resource "azurerm_virtual_network" "priv-mreze"{
         name = var.priv_mreze[count.index].subnet.name
         address_prefix = var.priv_mreze[count.index].subnet.address_prefix
     }
-    depends_on = [ data.terraform_remote_state.ResGroup_PubIP.outputs.res-group-name ]
 }
 
 resource "azurerm_network_interface" "WP-NICs" {
     count = length(var.WPice)
     name = "NIC-${count.index}"
-    location = azurerm_resource_group.ime_prezime.location
-    resource_group_name = azurerm_resource_group.ime_prezime.name
+    location = var.priv_mreze[count.index].location
+    resource_group_name = data.terraform_remote_state.ResGroup_PubIP.outputs.res-group-name
     ip_configuration {
       name = "NIC-${count.index}-ipconfig"
       subnet_id = azurerm_virtual_network.priv_mreze[count.index].subnet.id
@@ -32,8 +31,8 @@ resource "azurerm_linux_virtual_machine" "WordPress" {
   count = length(var.WPice)
   name = var.WPice[count.index].name
   size = var.WPice[count.index].size
-  resource_group_name = azurerm_resource_group.ime_prezime.name
-  location = azurerm_resource_group.ime_prezime.location
+  resource_group_name = data.terraform_remote_state.ResGroup_PubIP.outputs.res-group-name
+  location = azurerm_network_interface.WP-NICs[count.index].location
   admin_username = var.admin_username
   admin_password = var.admin_password
   network_interface_ids = [ azurerm_network_interface.WP-NICs[count.index].id ]
