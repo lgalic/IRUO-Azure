@@ -14,6 +14,10 @@ variable "subscription_id" {
     type = string
 }
 
+variable "name" {
+    type = string
+}
+
 variable "admin_username" {
   type = string
 }
@@ -49,17 +53,8 @@ variable "priv_mreze" {
         name = "subnet1"
         address_prefix = "192.168.2.0/24"
       }
-    },
-    {
-        name = "TrecaMreza"
-        location = "UK South"
-        address_space = [ "192.168.3.0/24" ]
-        subnet = {
-          name = "subnet1"
-          address_prefix = "192.168.3.0/24"
-        }
     }
-     ]
+  ]
 }
 
 variable "WPice" {
