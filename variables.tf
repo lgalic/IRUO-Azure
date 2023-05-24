@@ -53,6 +53,15 @@ variable "priv_mreze" {
         name = "subnet1"
         address_prefix = "192.168.2.0/24"
       }
+    },
+    {
+      name = "TrecaMreza"
+      location = "Germany West Central"
+      address_space = [ "192.168.3.0/24" ]
+      subnet = {
+        name = "subnet1"
+        address_prefix = "192.168.3.0/24"
+      }
     }
   ]
 }
@@ -64,10 +73,21 @@ variable "WPice" {
   })) 
   default = [ {
     name = "WP-1"
-    size = "B1ls"
+    size = "Standard_B1ls"
   },
   {
     name = "WP-2"
-    size = "B1ls"
+    size = "Standard_B1ls"
+  } ]
+}
+
+variable "nginx_lb" {
+  type = list(object({
+    name = string
+    size = string
+  }))
+  default = [ {
+    name = "Nginx-lb"
+    size = "Standard_B1ls"
   } ]
 }
