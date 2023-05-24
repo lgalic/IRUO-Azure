@@ -66,6 +66,10 @@ variable "priv_mreze" {
   ]
 }
 
+variable net_peering {
+  
+}
+
 variable "WPice" {
   type = list(object({
     name = string

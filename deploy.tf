@@ -30,8 +30,7 @@ resource "azurerm_virtual_network" "priv-mreze" {
     depends_on = [ azurerm_resource_group.ime_prezime ]
 }
 
-resource "azurerm_virtual_network_peering" "priv-mreze-peering" {
-  count = length(azurerm_virtual_network.priv-mreze)-1
+resource "azurerm_virtual_network_peering" "Prva-Druga-peering" {
   name = "peering-to-${element(azurerm_virtual_network.priv-mreze[*].name, count.index + 1)}"
   resource_group_name = azurerm_resource_group.ime_prezime.name
   virtual_network_name = element(azurerm_virtual_network.priv-mreze[*].name, count.index)
@@ -118,7 +117,7 @@ resource "azurerm_linux_virtual_machine" "Nginx-LB" {
   name = var.nginx_lb[0].name
   size = var.nginx_lb[0].size
   resource_group_name = azurerm_resource_group.ime_prezime.name
-  location = element(azurerm_network_interface.WP-NICs[*].location, length(azurerm_network_interface.WP-NICs)-1)
+  location = azurerm_network_interface.Pub-NIC.location
   admin_username = var.admin_username
   admin_password = var.admin_password
   disable_password_authentication = false
