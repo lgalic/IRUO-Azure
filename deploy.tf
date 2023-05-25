@@ -30,19 +30,27 @@ resource "azurerm_virtual_network" "priv-mreze" {
     depends_on = [ azurerm_resource_group.ime_prezime ]
 }
 
-resource "azurerm_virtual_network_peering" "Prva-Druga-peering" {
-  name = "peering-to-${element(azurerm_virtual_network.priv-mreze[*].name, count.index + 1)}"
+locals {
+  priv_mreze_sub = flatten(azurerm_virtual_network.priv-mreze[*].subnet)
+  mreze_peer = merge({
+    P=[{azurerm_virtual_network.priv-mreze[1].name = azurerm_virtual_network.priv-mreze[1].id,azurerm_virtual_network.priv-mreze[2].name = azurerm_virtual_network.priv-mreze[2].id}],
+    D = [{azurerm_virtual_network.priv-mreze[0].name = azurerm_virtual_network.priv-mreze[0].id,azurerm_virtual_network.priv-mreze[2].name = azurerm_virtual_network.priv-mreze[2].id}],
+    T = [{azurerm_virtual_network.priv-mreze[0].name = azurerm_virtual_network.priv-mreze[0].id,azurerm_virtual_network.priv-mreze[1].name = azurerm_virtual_network.priv-mreze[1].id}]
+    })
+}
+
+
+resource "azurerm_virtual_network_peering" "Prva-all-peering" {
+  count = length(local.mreze_peer["P"])
+  name = "peering-to-${keys(local.mreze_peer["P"][count.index])}"
   resource_group_name = azurerm_resource_group.ime_prezime.name
-  virtual_network_name = element(azurerm_virtual_network.priv-mreze[*].name, count.index)
-  remote_virtual_network_id = element(azurerm_virtual_network.priv-mreze[*].id, count.index + 1)
+  virtual_network_name = azurerm_virtual_network.priv-mreze[0].name
+  remote_virtual_network_id = azurerm_virtual_network.priv-mreze[1].id
   allow_virtual_network_access = true
   allow_forwarded_traffic = true
   allow_gateway_transit = false
 }
 
-locals {
-  priv_mreze_sub = flatten(azurerm_virtual_network.priv-mreze[*].subnet)
-}
 
 /*
 resource "azurerm_network_security_group" "internal" {
@@ -135,27 +143,3 @@ resource "azurerm_linux_virtual_machine" "Nginx-LB" {
 #  custom_data = filebase64("cloud-init/wordpress-cloud-init.txt")
   depends_on = [ azurerm_network_interface.Pub-NIC ]        
 }
-
-
-
-/*resource "azurerm_application_gateway" "L7-lb" {
-    name = "App-Gateway-WP"
-    location = azurerm_resource_group.ime_prezime.location
-    resource_group_name = azurerm_resource_group.ime_prezime.name
-    gateway_ip_configuration {
-      name = azurerm_public_ip.javna_IP.name
-      public_ip_address_id = azurerm_public_ip.javna_IP.id
-    }
-    frontend_port {
-      name = "HTTPS-frontend"
-      port = 443
-    }
-    frontend_ip_configuration {
-      name = "frontend-ipconfig"
-      public_ip_address_id = azurerm_public_ip.javna_IP.id
-    }
-    #kreirati VM-ice prvo
-    backend_address_pool {
-      name = "backend-pool-1"
-    }
-}*/
