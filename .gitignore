@@ -6,3 +6,4 @@ terraform.tfvars
 1-Res-Group-PubIP/.terraform/
 1-Res-Group-PubIP/.terraform.lock.hcl
 1-Res-Group-PubIP/terraform.tfstate
+terraform.tfstate.*

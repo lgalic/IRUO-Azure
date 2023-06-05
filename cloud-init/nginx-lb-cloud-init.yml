@@ -1,0 +1,21 @@
+#cloud-config
+package_upgrade: true
+packages:
+    - haproxy
+
+runcmd:
+  - |
+    cat >> /etc/haproxy/haproxy.cfg << EOF
+
+    frontend https-in
+      bind ${public_IP}:443
+      backend wp-servers
+      option forward
+
+    backend wp-servers
+      balance roundrobin
+      server ${wp1} ${wp1_address}:80 check
+      server ${wp2} ${wp2_address}:80 check
+    EOF
+
+    systemctl enable haproxy --now

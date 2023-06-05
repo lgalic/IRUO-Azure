@@ -38,7 +38,7 @@ variable "priv_mreze" {
     }))
     default = [ {
       name = "PrvaMreza"
-      location = "West Europe"
+      location = "Germany West Central"
       address_space = [ "192.168.1.0/24" ]
       subnet = {
         name = "subnet1"
@@ -56,7 +56,7 @@ variable "priv_mreze" {
     },
     {
       name = "TrecaMreza"
-      location = "Germany West Central"
+      location = "West Europe" 
       address_space = [ "192.168.3.0/24" ]
       subnet = {
         name = "subnet1"
