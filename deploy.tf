@@ -112,6 +112,17 @@ resource "azurerm_network_security_group" "public-sec" {
     source_port_range = "*"
     destination_address_prefix = "*"
   }
+  security_rule {
+    name = "http"
+    priority = 102
+    direction = "Inbound"
+    access = "Allow"
+    protocol = "Tcp"
+    destination_port_range = "80"
+    source_address_prefix = "*"
+    source_port_range = "*"
+    destination_address_prefix = "*"
+  }
 }
 
 
@@ -169,25 +180,34 @@ resource "azurerm_linux_virtual_machine" "WordPress" {
     sku = "22_04-lts-gen2"
     version = "latest"
   }
-#  custom_data = filebase64("cloud-init/wordpress-cloud-init.txt")
+  custom_data = filebase64("./cloud-init/wordpress-cloud-init.yml")
   depends_on = [ azurerm_network_interface.WP-NICs ]        
 }
 
 data "template_file" "nginx-lb-init" {
-  template = "${file("${path.module}/cloud-init/nginx-lb-cloud-init.yml")}"
+  template = "${file("./templates/nginx-lb-cloud-init.tpl")}"
 
   vars = {
     public_IP = "${azurerm_public_ip.javna_IP.ip_address}"
-    wp1 = "${azurerm_linux_virtual_machine.WordPress[0].name}"
-    wp2 = "${azurerm_linux_virtual_machine.WordPress[1].name}"
+    wp1 = "${var.WPice[0].name}"
+    wp2 = "${var.WPice[1].name}"
     wp1_address = "${azurerm_network_interface.WP-NICs[0].private_ip_address}"
     wp2_address = "${azurerm_network_interface.WP-NICs[1].private_ip_address}"
   }
   depends_on = [ 
     azurerm_public_ip.javna_IP, 
-    azurerm_linux_virtual_machine.WordPress,
     azurerm_network_interface.WP-NICs
    ]
+}
+
+data "template_cloudinit_config" "nginx-lb-cloudinit" {
+  gzip = true
+  base64_encode = true
+  part {
+    filename = "nginx-lb-cloudinit.yml"
+    content = "${data.template_file.nginx-lb-init.rendered}"
+  }
+  depends_on = [ data.template_file.nginx-lb-init ]
 }
 
 resource "azurerm_linux_virtual_machine" "Nginx-LB" {
@@ -209,28 +229,32 @@ resource "azurerm_linux_virtual_machine" "Nginx-LB" {
     sku = "22_04-lts-gen2"
     version = "latest"
   }
-  custom_data = <<-EOT
-#cloud-config
-package_upgrade: true
-packages:
-    - haproxy
+  custom_data = "${data.template_cloudinit_config.nginx-lb-cloudinit.rendered}"
+  depends_on = [ azurerm_network_interface.Pub-NIC, data.template_cloudinit_config.nginx-lb-cloudinit ]        
+}
 
-runcmd:
-  - |
-    cat >> /etc/haproxy/haproxy.cfg << EOF
+data "template_file" "ansible_inventory" {
+  template = "${file("./templates/ansible-inventory.tpl")}"
+  vars = {
+    public_IP = "${azurerm_public_ip.javna_IP.ip_address}"
+    username = "${var.admin_username}"
+    password = "${var.admin_password}"
+  }
+  depends_on = [ azurerm_linux_virtual_machine.Nginx-LB ]
+}
 
-    frontend https-in
-      bind ${azurerm_public_ip.javna_IP.ip_address}:443
-      backend wp-servers
-      option forward
+resource "local_file" "ansible_inventory" {
+  filename = "./ansible/inventory"
+  content = data.template_file.ansible_inventory.rendered
+  directory_permission = "0750"
+  file_permission = "0644"
+  depends_on = [ data.template_file.ansible_inventory ]
+}
 
-    backend wp-servers
-      balance roundrobin
-      server ${azurerm_linux_virtual_machine.WordPress[0].name} ${azurerm_network_interface.WP-NICs[0].private_ip_address}:80 check
-      server ${azurerm_linux_virtual_machine.WordPress[1].name} ${azurerm_network_interface.WP-NICs[1].private_ip_address}:80 check
-    EOF
-
-    systemctl enable haproxy --now
-  EOT
-  depends_on = [ azurerm_network_interface.Pub-NIC ]        
+resource "null_resource" "ansible_provisioner" {
+  provisioner "local-exec" {
+    command = "ansible-playbook -i inventory playbook.yml"
+    working_dir = "./ansible"
+  }
+  depends_on = [ local_file.ansible_inventory ]
 }

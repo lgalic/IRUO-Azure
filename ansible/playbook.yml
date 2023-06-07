@@ -1,0 +1,23 @@
+---
+- name: Certificate deployment for Haproxy 
+  hosts: haproxy
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Copy over the certificate to /etc/haproxy
+      copy:
+        src: ./certs/haproxy.pem
+        dest: /etc/haproxy/
+      register: copyresult
+      until: "copyresult is not failed"
+      retries: 10
+      delay: 5
+  
+    - name: Restart haproxy service
+      service:
+        name: haproxy
+        state: restarted
+      register: haproxyresult
+      until: "haproxyresult is not failed"
+      retries: 10
+      delay: 5

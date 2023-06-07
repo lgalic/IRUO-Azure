@@ -77,11 +77,11 @@ variable "WPice" {
   })) 
   default = [ {
     name = "WP-1"
-    size = "Standard_B1ls"
+    size = "Standard_B1s"
   },
   {
     name = "WP-2"
-    size = "Standard_B1ls"
+    size = "Standard_B1s"
   } ]
 }
 
