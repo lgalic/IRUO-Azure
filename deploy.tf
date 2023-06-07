@@ -160,16 +160,64 @@ resource "azurerm_network_interface_security_group_association" "Pub-NIC-secgrou
 }
 
 
-resource "azurerm_linux_virtual_machine" "WordPress" {
-  count = length(var.WPice)
-  name = var.WPice[count.index].name
-  size = var.WPice[count.index].size
+
+data "template_file" "wordpress-master-init" {
+  template = "${file("./templates/wordpress-master-cloud-init.tpl")}"
+
+  vars = {
+    wpadmin_username = "${var.wpadmin_username}"
+    wpadmin_password = "${var.wpadmin_password}"
+  }
+  depends_on = [ 
+    azurerm_network_interface.WP-NICs
+   ]
+}
+
+data "template_cloudinit_config" "wordpress-master-cloudinit" {
+  gzip = true
+  base64_encode = true
+  part {
+    filename = "wordpress-master-cloud-init.yml"
+    content = "${data.template_file.wordpress-master-init.rendered}"
+  }
+  depends_on = [ data.template_file.wordpress-master-init ]
+}
+
+
+
+resource "azurerm_linux_virtual_machine" "WordPress-Master" {
+  name = var.WPice[0].name
+  size = var.WPice[0].size
   resource_group_name = azurerm_resource_group.ime_prezime.name
-  location = azurerm_network_interface.WP-NICs[count.index].location
+  location = azurerm_network_interface.WP-NICs[0].location
   admin_username = var.admin_username
   admin_password = var.admin_password
   disable_password_authentication = false
-  network_interface_ids = [ azurerm_network_interface.WP-NICs[count.index].id ]
+  network_interface_ids = [ azurerm_network_interface.WP-NICs[0].id ]
+  os_disk {
+    caching = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+  source_image_reference {
+    publisher = "Canonical"
+    offer = "0001-com-ubuntu-server-jammy"
+    sku = "22_04-lts-gen2"
+    version = "latest"
+  }
+  custom_data = "${data.template_cloudinit_config.wordpress-master-cloudinit.rendered}"
+  depends_on = [ azurerm_network_interface.WP-NICs, data.template_cloudinit_config.wordpress-master-cloudinit ]        
+}
+
+/*
+resource "azurerm_linux_virtual_machine" "WordPress-Slave" {
+  name = var.WPice[1].name
+  size = var.WPice[1].size
+  resource_group_name = azurerm_resource_group.ime_prezime.name
+  location = azurerm_network_interface.WP-NICs[1].location
+  admin_username = var.admin_username
+  admin_password = var.admin_password
+  disable_password_authentication = false
+  network_interface_ids = [ azurerm_network_interface.WP-NICs[1].id ]
   os_disk {
     caching = "ReadWrite"
     storage_account_type = "Standard_LRS"
@@ -183,6 +231,7 @@ resource "azurerm_linux_virtual_machine" "WordPress" {
   custom_data = filebase64("./cloud-init/wordpress-cloud-init.yml")
   depends_on = [ azurerm_network_interface.WP-NICs ]        
 }
+*/
 
 data "template_file" "nginx-lb-init" {
   template = "${file("./templates/nginx-lb-cloud-init.tpl")}"
@@ -209,6 +258,8 @@ data "template_cloudinit_config" "nginx-lb-cloudinit" {
   }
   depends_on = [ data.template_file.nginx-lb-init ]
 }
+
+
 
 resource "azurerm_linux_virtual_machine" "Nginx-LB" {
   name = var.nginx_lb[0].name

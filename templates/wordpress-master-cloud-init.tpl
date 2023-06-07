@@ -21,11 +21,11 @@ runcmd:
     - tar --strip-components=1 -xvzf /tmp/latest.tar.gz -C /var/www/html/
     - cp /var/www/html/wp-config-sample.php /var/www/html/wp-config.php
     - mysql -e "create database wordpress;"
-    - mysql -e "create user 'wpadmin'@'localhost' identified by 'bi8t4m0';"
-    - mysql -e "grant all privileges on wordpress.* to wpadmin@'localhost'; flush privileges;"
+    - mysql -e "create user '${wpadmin_username}'@'localhost' identified by '${wpadmin_password}'";
+    - mysql -e "grant all privileges on wordpress.* to ${wpadmin_username}@'localhost'; flush privileges;"
     - sed -i "s/database_name_here/wordpress/g" /var/www/html/wp-config.php
-    - sed -i "s/username_here/wpadmin/g" /var/www/html/wp-config.php
-    - sed -i "s/password_here/bi8t4m0/g" /var/www/html/wp-config.php
+    - sed -i "s/username_here/${wpadmin_username}/g" /var/www/html/wp-config.php
+    - sed -i "s/password_here/${wpadmin_password}/g" /var/www/html/wp-config.php
     - chown -R www-data:www-data /var/www/html/
     - a2enmod rewrite
     - systemctl enable apache2 --now

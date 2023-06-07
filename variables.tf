@@ -26,6 +26,14 @@ variable "admin_password" {
   type = string
 }
 
+variable "wpadmin_username" {
+  type = string
+}
+
+variable "wpadmin_password" {
+  type = string
+}
+
 variable "priv_mreze" {
     type = list(object({
         name = string
@@ -38,7 +46,7 @@ variable "priv_mreze" {
     }))
     default = [ {
       name = "PrvaMreza"
-      location = "Germany West Central"
+      location = "Switzerland North"
       address_space = [ "192.168.1.0/24" ]
       subnet = {
         name = "subnet1"

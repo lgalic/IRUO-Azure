@@ -15,10 +15,12 @@ runcmd:
       option http-server-close
       http-request set-header X-Forwarded-Proto https if { ssl_fc }
       http-request redirect scheme https code 301 if !{ ssl_fc }
-
+      http-response set-header Content-Security-Policy upgrade-insecure-requests
 
     backend backend_servers
       balance roundrobin
+      http-request set-header X-Forwarded-Port %[dst_port]
+      http-request add-header X-Forwarded-Proto https if { ssl_fc }
       server ${wp1} ${wp1_address}:80 check
       server ${wp2} ${wp2_address}:80 check
     EOF
