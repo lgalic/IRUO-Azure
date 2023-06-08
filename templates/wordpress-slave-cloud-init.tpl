@@ -25,15 +25,17 @@ runcmd:
     - mysql -e "create user '${wpadmin_username}'@'localhost' identified by '${wpadmin_password}';"
     - mysql -e "grant all privileges on wordpress.* to ${wpadmin_username}@'localhost';"
     - mysql -e "create user '${db_replica_user}'@'localhost' identified by '${db_replica_pass}'";
-    - mysql -e "grant replication slave on *.* to ${db_replica_user};"
-    - mysql -e "flush privileges; flush tables with read lock;"
+    - mysql -e "grant all privileges on wordpress.* to '${db_replica_user}'@'localhost';"
+    - mysql -e "change master to master_host = '${master_ip}', master_user = '${db_replica_user}', master_password = '${db_replica_pass}', master_port = 3306, master_connect_retry = 10, master_use_gtid = current_pos; start slave;"
+
     
-    - sed -i -e 's/#server-id/server-id/g' \
+    - sed -i -e 's/#server-id.*/server-id = 2/g' \
         -e 's/^bind-address.*/bind-address = ${server_ip}/g' /etc/mysql/mysql.conf.d/mysqld.cnf
-    - sed -i 's/bind-address = ${server_ip}/i replicate-do-db=wordpress/g' /etc/mysql/mysql.conf.d/mysqld.cnf
+    - sed -i -e 's/bind-address = ${server_ip}/i replicate-do-db=wordpress/g' /etc/mysql/mysql.conf.d/mysqld.cnf
+
     - sed -i "s/database_name_here/wordpress/g" /var/www/html/wp-config.php
-    - sed -i "s/username_here/${wpadmin_username}/g" /var/www/html/wp-config.php
-    - sed -i "s/password_here/${wpadmin_password}/g" /var/www/html/wp-config.php
+    - sed -i "s/username_here/${db_replica_user}/g" /var/www/html/wp-config.php
+    - sed -i "s/password_here/${db_replica_pass}/g" /var/www/html/wp-config.php
     - chown -R www-data:www-data /var/www/html/
     - a2enmod rewrite
     - systemctl enable apache2 --now
@@ -55,3 +57,4 @@ runcmd:
             Require all granted
         </Directory>
         EOF
+

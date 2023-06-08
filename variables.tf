@@ -34,6 +34,14 @@ variable "wpadmin_password" {
   type = string
 }
 
+variable "db_replica_user" {
+  type = string
+}
+
+variable "db_replica_pass" {
+  type = string
+}
+
 variable "priv_mreze" {
     type = list(object({
         name = string

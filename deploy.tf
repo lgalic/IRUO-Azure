@@ -167,6 +167,9 @@ data "template_file" "wordpress-master-init" {
   vars = {
     wpadmin_username = "${var.wpadmin_username}"
     wpadmin_password = "${var.wpadmin_password}"
+    db_replica_user = "${var.db_replica_user}"
+    db_replica_pass = "${var.db_replica_pass}"
+    server_ip = "${azurerm_network_interface.WP-NICs[0].private_ip_address}"
   }
   depends_on = [ 
     azurerm_network_interface.WP-NICs
@@ -208,7 +211,33 @@ resource "azurerm_linux_virtual_machine" "WordPress-Master" {
   depends_on = [ azurerm_network_interface.WP-NICs, data.template_cloudinit_config.wordpress-master-cloudinit ]        
 }
 
-/*
+data "template_file" "wordpress-slave-init" {
+  template = "${file("./templates/wordpress-slave-cloud-init.tpl")}"
+
+  vars = {
+    wpadmin_username = "${var.wpadmin_username}"
+    wpadmin_password = "${var.wpadmin_password}"
+    db_replica_user = "${var.db_replica_user}"
+    db_replica_pass = "${var.db_replica_pass}"
+    server_ip = "${azurerm_network_interface.WP-NICs[1].private_ip_address}"
+    master_ip = "${azurerm_network_interface.WP-NICs[0].private_ip_address}"
+
+  }
+  depends_on = [ 
+    azurerm_network_interface.WP-NICs
+   ]
+}
+
+data "template_cloudinit_config" "wordpress-slave-cloudinit" {
+  gzip = true
+  base64_encode = true
+  part {
+    filename = "wordpress-slave-cloud-init.yml"
+    content = "${data.template_file.wordpress-slave-init.rendered}"
+  }
+  depends_on = [ data.template_file.wordpress-slave-init ]
+}
+
 resource "azurerm_linux_virtual_machine" "WordPress-Slave" {
   name = var.WPice[1].name
   size = var.WPice[1].size
@@ -228,10 +257,10 @@ resource "azurerm_linux_virtual_machine" "WordPress-Slave" {
     sku = "22_04-lts-gen2"
     version = "latest"
   }
-  custom_data = filebase64("./cloud-init/wordpress-cloud-init.yml")
+  custom_data = "${data.template_cloudinit_config.wordpress-slave-cloudinit.rendered}"
   depends_on = [ azurerm_network_interface.WP-NICs ]        
 }
-*/
+
 
 data "template_file" "nginx-lb-init" {
   template = "${file("./templates/nginx-lb-cloud-init.tpl")}"
