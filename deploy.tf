@@ -170,6 +170,7 @@ data "template_file" "wordpress-master-init" {
     db_replica_user = "${var.db_replica_user}"
     db_replica_pass = "${var.db_replica_pass}"
     server_ip = "${azurerm_network_interface.WP-NICs[0].private_ip_address}"
+    slave_ip = "${azurerm_network_interface.WP-NICs[1].private_ip_address}"
   }
   depends_on = [ 
     azurerm_network_interface.WP-NICs

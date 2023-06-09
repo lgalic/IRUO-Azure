@@ -21,23 +21,26 @@ runcmd:
     - tar --strip-components=1 -xvzf /tmp/latest.tar.gz -C /var/www/html/
     - cp /var/www/html/wp-config-sample.php /var/www/html/wp-config.php
 
+    - systemctl enable mysql --now
+    - systemctl restart mysql
+
     - mysql -e "create database wordpress;"
     - mysql -e "create user '${wpadmin_username}'@'localhost' identified by '${wpadmin_password}';"
+    - echo "Granting database privileges on wordpress..."
     - mysql -e "grant all privileges on wordpress.* to ${wpadmin_username}@'localhost';"
-    - mysql -e "create user '${db_replica_user}'@'localhost' identified by '${db_replica_pass}'";
-    - mysql -e "grant replication slave on *.* to ${db_replica_user};"
-    - mysql -e "flush privileges; flush tables with read lock;"
+    - mysql -e "create user '${db_replica_user}'@'${slave_ip}' identified by '${db_replica_pass}';"
+    - echo "Granting replication privileges..."
+    - mysql -e "grant replication slave on *.* to ${db_replica_user}@'${slave_ip}';"
+    - mysql -e "flush privileges; use wordpress; flush tables with read lock;"
     
-    - sed -i -e 's/#server-id/server-id/g' \
-        -e 's/^bind-address.*/bind-address = ${server_ip}/g' /etc/mysql/mysql.conf.d/mysqld.cnf
-    - sed -i 's/bind-address = ${server_ip}/i replicate-do-db=wordpress/g' /etc/mysql/mysql.conf.d/mysqld.cnf
+    - sed -i -e 's/# server-id/server-id/g' -e 's/^bind-address.*/bind-address = ${server_ip}/g' /etc/mysql/mysql.conf.d/mysqld.cnf
+    - sed -i '/bind-address = ${server_ip}/i binlog_do_db=wordpress' /etc/mysql/mysql.conf.d/mysqld.cnf
     - sed -i "s/database_name_here/wordpress/g" /var/www/html/wp-config.php
     - sed -i "s/username_here/${wpadmin_username}/g" /var/www/html/wp-config.php
     - sed -i "s/password_here/${wpadmin_password}/g" /var/www/html/wp-config.php
     - chown -R www-data:www-data /var/www/html/
     - a2enmod rewrite
     - systemctl enable apache2 --now
-    - systemctl enable mysql --now
     - systemctl restart apache2
     - systemctl restart mysql
     - |
