@@ -212,6 +212,7 @@ resource "azurerm_linux_virtual_machine" "WordPress-Master" {
   depends_on = [ azurerm_network_interface.WP-NICs, data.template_cloudinit_config.wordpress-master-cloudinit ]        
 }
 
+/*
 data "template_file" "wordpress-slave-init" {
   template = "${file("./templates/wordpress-slave-cloud-init.tpl")}"
 
@@ -262,7 +263,7 @@ resource "azurerm_linux_virtual_machine" "WordPress-Slave" {
   depends_on = [ azurerm_network_interface.WP-NICs ]        
 }
 
-
+*/
 data "template_file" "nginx-lb-init" {
   template = "${file("./templates/nginx-lb-cloud-init.tpl")}"
 

@@ -17,10 +17,11 @@ packages:
 
 runcmd:
     - rm -f /var/www/html/index.html
-    - wget -c https://wordpress.org/latest.tar.gz -P /tmp
-    - tar --strip-components=1 -xvzf /tmp/latest.tar.gz -C /var/www/html/
-    - cp /var/www/html/wp-config-sample.php /var/www/html/wp-config.php
-
+    - wget -P /tmp https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+    - chmod +x /tmp/wp-cli.phar 
+    - cd /var/www/html && /tmp/wp-cli.phar core download
+    - /tmp/wp-cli.phar config create --dbname=wordpress --dbuser=${wpadmin_username} --dbpass=${wpadmin_password} --locale=en_DB
+    - wp-cli core install --url=lukagalic.studenti.itedu.hr --title=Test1 --admin_user=test --admin-password=test --admin_email=soc@soc.com
     - systemctl enable mysql --now
     - systemctl restart mysql
 
@@ -35,9 +36,7 @@ runcmd:
     
     - sed -i -e 's/# server-id/server-id/g' -e 's/^bind-address.*/bind-address = ${server_ip}/g' /etc/mysql/mysql.conf.d/mysqld.cnf
     - sed -i '/bind-address = ${server_ip}/i binlog_do_db=wordpress' /etc/mysql/mysql.conf.d/mysqld.cnf
-    - sed -i "s/database_name_here/wordpress/g" /var/www/html/wp-config.php
-    - sed -i "s/username_here/${wpadmin_username}/g" /var/www/html/wp-config.php
-    - sed -i "s/password_here/${wpadmin_password}/g" /var/www/html/wp-config.php
+
     - chown -R www-data:www-data /var/www/html/
     - a2enmod rewrite
     - systemctl enable apache2 --now

@@ -30,7 +30,7 @@ runcmd:
     - mysql -e "create user '${db_replica_user}'@'localhost' identified by '${db_replica_pass}';"
     - echo "Granting replication privileges..."
     - mysql -e "grant all privileges on wordpress.* to '${db_replica_user}'@'localhost';"
-    - mysql -e "change master to master_host = '${master_ip}', master_user = '${db_replica_user}', master_password = '${db_replica_pass}', master_port = 3306;"
+    - mysql -e "change master to GET_MASTER_PUBLIC_KEY=1, master_host = '${master_ip}', master_user = '${db_replica_user}', master_password = '${db_replica_pass}', master_port = 3306;"
 
     
     - sed -i -e 's/# server-id.*/server-id = 2/g' -e 's/^bind-address.*/bind-address = ${server_ip}/g' /etc/mysql/mysql.conf.d/mysqld.cnf
