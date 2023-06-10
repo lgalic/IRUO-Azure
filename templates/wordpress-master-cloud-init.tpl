@@ -19,9 +19,9 @@ runcmd:
     - rm -f /var/www/html/index.html
     - wget -P /tmp https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
     - chmod +x /tmp/wp-cli.phar 
-    - cd /var/www/html && /tmp/wp-cli.phar core download
-    - /tmp/wp-cli.phar config create --dbname=wordpress --dbuser=${wpadmin_username} --dbpass=${wpadmin_password} --locale=en_DB
-    - wp-cli core install --url=lukagalic.studenti.itedu.hr --title=Test1 --admin_user=test --admin-password=test --admin_email=soc@soc.com
+    - cd /var/www/html && sudo -u www-data -i -- /tmp/wp-cli.phar core download
+    - sudo -u www-data -i -- /tmp/wp-cli.phar config create --dbname=wordpress --dbuser=${wpadmin_username} --dbpass=${wpadmin_password} --locale=en_DB
+    - sudo -u www-data -i -- wp-cli core install --url=lukagalic.studenti.itedu.hr --title=Test1 --admin_user=test --admin-password=test --admin_email=soc@soc.com
     - systemctl enable mysql --now
     - systemctl restart mysql
 
