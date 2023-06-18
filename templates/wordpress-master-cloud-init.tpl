@@ -14,17 +14,9 @@ packages:
     - php-xml
     - php-xmlrpc
     - php-zip
+    - sshpass
 
 runcmd:
-    - rm -f /var/www/html/index.html
-    - wget -P /tmp https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
-    - chmod +x /tmp/wp-cli.phar 
-    - cd /var/www/html && sudo -u www-data -i -- /tmp/wp-cli.phar core download
-    - sudo -u www-data -i -- /tmp/wp-cli.phar config create --dbname=wordpress --dbuser=${wpadmin_username} --dbpass=${wpadmin_password} --locale=en_DB
-    - sudo -u www-data -i -- wp-cli core install --url=lukagalic.studenti.itedu.hr --title=Test1 --admin_user=test --admin-password=test --admin_email=soc@soc.com
-    - systemctl enable mysql --now
-    - systemctl restart mysql
-
     - mysql -e "create database wordpress;"
     - mysql -e "create user '${wpadmin_username}'@'localhost' identified by '${wpadmin_password}';"
     - echo "Granting database privileges on wordpress..."
@@ -33,7 +25,18 @@ runcmd:
     - echo "Granting replication privileges..."
     - mysql -e "grant replication slave on *.* to ${db_replica_user}@'${slave_ip}';"
     - mysql -e "flush privileges; use wordpress; flush tables with read lock;"
-    
+
+    - rm -f /var/www/html/index.html
+    - wget -P /tmp https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+    - chmod +x /tmp/wp-cli.phar 
+    - cd /var/www/html && /tmp/wp-cli.phar core download --allow-root
+    - /tmp/wp-cli.phar config create --dbname=wordpress --dbuser=${wpadmin_username} --dbpass=${wpadmin_password} --locale=en_DB --allow-root
+    - /tmp/wp-cli.phar core install --url=lukagalic.studenti.itedu.hr --title=IRUO-Azure --admin_user=test --admin_password=test --admin_email=soc@soc.com --allow-root
+    - systemctl enable mysql --now
+    - systemctl restart mysql
+
+    - mysqldump wordpress > /tmp/wordpress.sql
+
     - sed -i -e 's/# server-id/server-id/g' -e 's/^bind-address.*/bind-address = ${server_ip}/g' /etc/mysql/mysql.conf.d/mysqld.cnf
     - sed -i '/bind-address = ${server_ip}/i binlog_do_db=wordpress' /etc/mysql/mysql.conf.d/mysqld.cnf
 
@@ -42,14 +45,11 @@ runcmd:
     - systemctl enable apache2 --now
     - systemctl restart apache2
     - systemctl restart mysql
+
+    - mysql -e "show master status;" | awk '{print $1" "$2}' > /tmp/master-mysql.txt
+    - rsync -avzh --rsh="sshpass -p ${admin_password} ssh -l ${admin_username} -o StrictHostKeyChecking=no" /tmp/master-mysql.txt ${slave_ip}:/tmp/
+    - rsync -avzh --rsh="sshpass -p ${admin_password} ssh -l ${admin_username} -o StrictHostKeyChecking=no" /tmp/wordpress.sql ${slave_ip}:/tmp/
     - |
-        cat >> /var/www/html/wp-config.php << EOF
-        /** Make sure WordPress understands it's behind an SSL terminator */
-        define('FORCE_SSL_ADMIN', true);
-        define('FORCE_SSL_LOGIN', true);
-        if (\$_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https')
-        \$_SERVER['HTTPS']='on';
-        EOF
         cat >> /etc/apache2/apache2.cfg << EOF
         <Directory /var/www/html>
             Options Indexes FollowSymLinks
@@ -57,3 +57,4 @@ runcmd:
             Require all granted
         </Directory>
         EOF
+

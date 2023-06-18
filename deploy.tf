@@ -171,6 +171,8 @@ data "template_file" "wordpress-master-init" {
     db_replica_pass = "${var.db_replica_pass}"
     server_ip = "${azurerm_network_interface.WP-NICs[0].private_ip_address}"
     slave_ip = "${azurerm_network_interface.WP-NICs[1].private_ip_address}"
+    admin_password = "${var.admin_password}"
+    admin_username = "${var.admin_username}"
   }
   depends_on = [ 
     azurerm_network_interface.WP-NICs
@@ -212,7 +214,6 @@ resource "azurerm_linux_virtual_machine" "WordPress-Master" {
   depends_on = [ azurerm_network_interface.WP-NICs, data.template_cloudinit_config.wordpress-master-cloudinit ]        
 }
 
-/*
 data "template_file" "wordpress-slave-init" {
   template = "${file("./templates/wordpress-slave-cloud-init.tpl")}"
 
@@ -223,7 +224,6 @@ data "template_file" "wordpress-slave-init" {
     db_replica_pass = "${var.db_replica_pass}"
     server_ip = "${azurerm_network_interface.WP-NICs[1].private_ip_address}"
     master_ip = "${azurerm_network_interface.WP-NICs[0].private_ip_address}"
-
   }
   depends_on = [ 
     azurerm_network_interface.WP-NICs
@@ -260,12 +260,11 @@ resource "azurerm_linux_virtual_machine" "WordPress-Slave" {
     version = "latest"
   }
   custom_data = "${data.template_cloudinit_config.wordpress-slave-cloudinit.rendered}"
-  depends_on = [ azurerm_network_interface.WP-NICs ]        
+  depends_on = [ azurerm_network_interface.WP-NICs, azurerm_linux_virtual_machine.WordPress-Master ]        
 }
 
-*/
-data "template_file" "nginx-lb-init" {
-  template = "${file("./templates/nginx-lb-cloud-init.tpl")}"
+data "template_file" "haproxy-lb-init" {
+  template = "${file("./templates/haproxy-lb-cloud-init.tpl")}"
 
   vars = {
     public_IP = "${azurerm_public_ip.javna_IP.ip_address}"
@@ -280,21 +279,21 @@ data "template_file" "nginx-lb-init" {
    ]
 }
 
-data "template_cloudinit_config" "nginx-lb-cloudinit" {
+data "template_cloudinit_config" "haproxy-lb-cloudinit" {
   gzip = true
   base64_encode = true
   part {
-    filename = "nginx-lb-cloudinit.yml"
-    content = "${data.template_file.nginx-lb-init.rendered}"
+    filename = "haproxy-lb-cloudinit.yml"
+    content = "${data.template_file.haproxy-lb-init.rendered}"
   }
-  depends_on = [ data.template_file.nginx-lb-init ]
+  depends_on = [ data.template_file.haproxy-lb-init ]
 }
 
 
 
-resource "azurerm_linux_virtual_machine" "Nginx-LB" {
-  name = var.nginx_lb[0].name
-  size = var.nginx_lb[0].size
+resource "azurerm_linux_virtual_machine" "HAProxy-LB" {
+  name = var.haproxy_lb[0].name
+  size = var.haproxy_lb[0].size
   resource_group_name = azurerm_resource_group.ime_prezime.name
   location = azurerm_network_interface.Pub-NIC.location
   admin_username = var.admin_username
@@ -311,8 +310,8 @@ resource "azurerm_linux_virtual_machine" "Nginx-LB" {
     sku = "22_04-lts-gen2"
     version = "latest"
   }
-  custom_data = "${data.template_cloudinit_config.nginx-lb-cloudinit.rendered}"
-  depends_on = [ azurerm_network_interface.Pub-NIC, data.template_cloudinit_config.nginx-lb-cloudinit ]        
+  custom_data = "${data.template_cloudinit_config.haproxy-lb-cloudinit.rendered}"
+  depends_on = [ azurerm_network_interface.Pub-NIC, data.template_cloudinit_config.haproxy-lb-cloudinit ]        
 }
 
 data "template_file" "ansible_inventory" {
@@ -322,7 +321,7 @@ data "template_file" "ansible_inventory" {
     username = "${var.admin_username}"
     password = "${var.admin_password}"
   }
-  depends_on = [ azurerm_linux_virtual_machine.Nginx-LB ]
+  depends_on = [ azurerm_linux_virtual_machine.HAProxy-LB ]
 }
 
 resource "local_file" "ansible_inventory" {

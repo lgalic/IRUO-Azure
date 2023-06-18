@@ -101,13 +101,13 @@ variable "WPice" {
   } ]
 }
 
-variable "nginx_lb" {
+variable "haproxy_lb" {
   type = list(object({
     name = string
     size = string
   }))
   default = [ {
-    name = "Nginx-lb"
+    name = "HAProxy-lb"
     size = "Standard_B1ls"
   } ]
 }

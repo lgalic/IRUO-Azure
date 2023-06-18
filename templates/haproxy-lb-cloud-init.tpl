@@ -22,7 +22,7 @@ runcmd:
       http-request set-header X-Forwarded-Port %[dst_port]
       http-request add-header X-Forwarded-Proto https if { ssl_fc }
       server ${wp1} ${wp1_address}:80 check
-      server ${wp2} ${wp2_address}:80 check
+      server ${wp2} ${wp2_address}:80 check backup
     EOF
 
     systemctl enable haproxy --now
